@@ -4,14 +4,11 @@ from collections.abc import Iterable
 import os
 
 import nltk
-from supar.utils.logging import get_logger, progress_bar
-from supar.utils.tokenizer import Tokenizer
-
 
 def kmeans(x, k, max_it=32):
     r"""
     KMeans algorithm for clustering the sentences by length.
-
+    
     Args:
         x (list[int]):
             The list of sentence lengths.
@@ -21,12 +18,10 @@ def kmeans(x, k, max_it=32):
         max_it (int):
             Maximum number of iterations.
             If centroids does not converge after several iterations, the algorithm will be early stopped.
-
     Returns:
         list[float], list[list[int]]:
             The first list contains average lengths of sentences in each cluster.
             The second is the list of clusters holding indices of data points.
-
     Examples:
         >>> x = torch.randint(10,20,(10,)).tolist()
         >>> x
@@ -64,7 +59,9 @@ def kmeans(x, k, max_it=32):
                 mask = torch.arange(k).unsqueeze(-1).eq(y)
             none = torch.where(~mask.any(-1))[0].tolist()
         # update the centroids
-        c, old = (x * mask).sum(-1) / mask.sum(-1), c
+        print(str(type(x))) # del
+#         c, old = (x * mask).sum(-1) / mask.sum(-1), c
+        c = (x * mask).sum(-1) / mask.sum(-1)
         # re-assign all datapoints to clusters
         dists, y = torch.abs_(x.unsqueeze(-1) - c).min(-1)
         # stop iteration early if the centroids converge
@@ -81,10 +78,23 @@ def kmeans(x, k, max_it=32):
     return centroids, clusters
 
 
+class Tokenizer:
+  
+    def __init__(self, lang='en'):
+        import stanza
+        try:
+            self.pipeline = stanza.Pipeline(lang=lang, processors='tokenize', verbose=False, tokenize_no_ssplit=True)
+        except Exception:
+            stanza.download(lang=lang, resources_url='stanford')
+            self.pipeline = stanza.Pipeline(lang=lang, processors='tokenize', verbose=False, tokenize_no_ssplit=True)
+
+    def __call__(self, text):
+        return [i.text for i in self.pipeline(text).sentences[0].tokens]
+
+
 class Sampler(torch.utils.data.Sampler):
     r"""
     Sampler that supports for bucketization and token-level batchification.
-
     Args:
         buckets (dict):
             A dict that maps each centroid to indices of clustered sentences.
@@ -145,7 +155,6 @@ class Dataset(torch.utils.data.Dataset):
     Dataset that is compatible with :class:`torch.utils.data.Dataset`, serving as a wrapper for manipulating all data fields
     with the operating behaviours defined in :class:`~supar.utils.transform.Transform`.
     The data fields of all the instantiated sentences can be accessed as an attribute of the dataset.
-
     Args:
         transform (Transform):
             An instance of :class:`~supar.utils.transform.Transform` or its derivations.
@@ -154,7 +163,6 @@ class Dataset(torch.utils.data.Dataset):
             A list of instances or a filename that will be passed into :meth:`transform.load`.
         kwargs (dict):
             Together with `data`, kwargs will be passed into :meth:`transform.load` to control the loading behaviour.
-
     Attributes:
         transform (Transform):
             An instance of :class:`~supar.utils.transform.Transform`.
@@ -239,7 +247,6 @@ class DataLoader(torch.utils.data.DataLoader):
 class Vocab(object):
     r"""
     Defines a vocabulary object that will be used to numericalize a field.
-
     Args:
         counter (~collections.Counter):
             :class:`~collections.Counter` object holding the frequencies of each value found in the data.
@@ -249,7 +256,6 @@ class Vocab(object):
             The list of special tokens (e.g., pad, unk, bos and eos) that will be prepended to the vocabulary. Default: [].
         unk_index (int):
             The index of unk token. Default: 0.
-
     Attributes:
         itos:
             A list of token strings indexed by their numerical identifiers.
@@ -319,10 +325,8 @@ def pad(tensors, padding_value=0, total_length=None, padding_side='right'):
 class RawField(object):
     r"""
     Defines a general datatype.
-
     A :class:`RawField` object does not assume any property of the datatype and
     it holds parameters relating to how a datatype should be processed.
-
     Args:
         name (str):
             The name of the field.
@@ -355,7 +359,6 @@ class Field(RawField):
     for elements of the field and their corresponding numerical representations.
     The :class:`Field` object also holds other parameters relating to how a datatype
     should be numericalized, such as a tokenization method.
-
     Args:
         name (str):
             The name of the field.
@@ -467,11 +470,9 @@ class Field(RawField):
         The sequence will be first passed to ``fn`` if available.
         If ``tokenize`` is not None, the input will be tokenized.
         Then the input will be lowercased optionally.
-
         Args:
             sequence (list):
                 The sequence to be preprocessed.
-
         Returns:
             A list of preprocessed sequence.
         """
@@ -489,7 +490,6 @@ class Field(RawField):
         r"""
         Constructs a :class:`~supar.utils.vocab.Vocab` object for this field from the dataset.
         If the vocabulary has already existed, this function will have no effect.
-
         Args:
             dataset (Dataset):
                 A :class:`~supar.utils.data.Dataset` object.
@@ -525,13 +525,10 @@ class Field(RawField):
     def transform(self, sequences):
         r"""
         Turns a list of sequences that use this field into tensors.
-
         Each sequence is first preprocessed and then numericalized if needed.
-
         Args:
             sequences (list[list[str]]):
                 A list of sequences.
-
         Returns:
             A list of tensors transformed from the input sequences.
         """
@@ -550,11 +547,9 @@ class Field(RawField):
     def compose(self, sequences):
         r"""
         Composes a batch of sequences into a padded tensor.
-
         Args:
             sequences (list[~torch.Tensor]):
                 A list of tensors.
-
         Returns:
             A padded tensor converted to proper device.
         """
@@ -565,7 +560,6 @@ class Field(RawField):
 class ChartField(Field):
     r"""
     Field dealing with chart inputs.
-
     Examples:
         >>> chart = [[    None,    'NP',    None,    None,  'S|<>',     'S'],
                      [    None,    None, 'VP|<>',    None,    'VP',    None],
@@ -605,7 +599,6 @@ class Transform(object):
     r"""
     A Transform object corresponds to a specific data format.
     It holds several instances of data fields that provide instructions for preprocessing and numericalizing, etc.
-
     Attributes:
         training (bool):
             Sets the object in training mode.
@@ -679,7 +672,6 @@ class Tree(Transform):
     r"""
     The Tree object factorize a constituency tree into four fields,
     each associated with one or more :class:`~supar.utils.field.Field` objects.
-
     Attributes:
         WORD:
             Words in the sentence.
@@ -715,7 +707,6 @@ class Tree(Transform):
         r"""
         Converts a list of tokens to a :class:`nltk.tree.Tree`.
         Missing fields are filled with underscores.
-
         Args:
             tokens (list[str] or list[tuple]):
                 This can be either a list of words or word/pos pairs.
@@ -724,10 +715,8 @@ class Tree(Transform):
             special_tokens (dict):
                 A dict for normalizing some special tokens to avoid tree construction crash.
                 Default: {'(': '-LRB-', ')': '-RRB-'}.
-
         Returns:
             A :class:`nltk.tree.Tree` object.
-
         Examples:
             >>> print(Tree.totree(['She', 'enjoys', 'playing', 'tennis', '.'], 'TOP'))
             (TOP ( (_ She)) ( (_ enjoys)) ( (_ playing)) ( (_ tennis)) ( (_ .)))
@@ -749,18 +738,14 @@ class Tree(Transform):
     def binarize(cls, tree):
         r"""
         Conducts binarization over the tree.
-
         First, the tree is transformed to satisfy `Chomsky Normal Form (CNF)`_.
         Here we call :meth:`~nltk.tree.Tree.chomsky_normal_form` to conduct left-binarization.
         Second, all unary productions in the tree are collapsed.
-
         Args:
             tree (nltk.tree.Tree):
                 The tree to be binarized.
-
         Returns:
             The binarized tree.
-
         Examples:
             >>> tree = nltk.Tree.fromstring('''
                                             (TOP
@@ -778,7 +763,6 @@ class Tree(Transform):
                     (VP|<> (_ enjoys))
                     (S::VP (VP|<> (_ playing)) (NP (_ tennis)))))
                 (S|<> (_ .))))
-
         .. _Chomsky Normal Form (CNF):
             https://en.wikipedia.org/wiki/Chomsky_normal_form
         """
@@ -805,7 +789,6 @@ class Tree(Transform):
         r"""
         Factorizes the tree into a sequence.
         The tree is traversed in pre-order.
-
         Args:
             tree (nltk.tree.Tree):
                 The tree to be factorized.
@@ -820,10 +803,8 @@ class Tree(Transform):
                 The key-val pairs in the dict are considered equivalent (non-directional). This is used for evaluation.
                 The default dict defined in `EVALB`_ is: {'ADVP': 'PRT'}
                 Default: ``None``.
-
         Returns:
             The sequence of the factorized tree.
-
         Examples:
             >>> tree = nltk.Tree.fromstring('''
                                             (TOP
@@ -836,7 +817,6 @@ class Tree(Transform):
             [(0, 5, 'TOP'), (0, 5, 'S'), (0, 1, 'NP'), (1, 4, 'VP'), (2, 4, 'S'), (2, 4, 'VP'), (3, 4, 'NP')]
             >>> Tree.factorize(tree, delete_labels={'TOP', 'S1', '-NONE-', ',', ':', '``', "''", '.', '?', '!', ''})
             [(0, 5, 'S'), (0, 1, 'NP'), (1, 4, 'VP'), (2, 4, 'S'), (2, 4, 'VP'), (3, 4, 'NP')]
-
         .. _EVALB:
             https://nlp.cs.nyu.edu/evalb/
         """
@@ -864,17 +844,14 @@ class Tree(Transform):
         Builds a constituency tree from the sequence. The sequence is generated in pre-order.
         During building the tree, the sequence is de-binarized to the original format (i.e.,
         the suffixes ``|<>`` are ignored, the collapsed labels are recovered).
-
         Args:
             tree (nltk.tree.Tree):
                 An empty tree that provides a base for building a result tree.
             sequence (list[tuple]):
                 A list of tuples used for generating a tree.
                 Each tuple consits of the indices of left/right boundaries and label of the constituent.
-
         Returns:
             A result constituency tree.
-
         Examples:
             >>> tree = Tree.totree(['She', 'enjoys', 'playing', 'tennis', '.'], 'TOP')
             >>> sequence = [(0, 5, 'S'), (0, 4, 'S|<>'), (0, 1, 'NP'), (1, 4, 'VP'), (1, 2, 'VP|<>'),
@@ -917,7 +894,6 @@ class Tree(Transform):
                 Default: ``None``.
             max_len (int):
                 Sentences exceeding the length will be discarded. Default: ``None``.
-
         Returns:
             A list of :class:`TreeSentence` instances.
         """
@@ -934,7 +910,7 @@ class Tree(Transform):
             trees = [self.totree(i, self.root) for i in data]
 
         i, sentences = 0, []
-        for tree in progress_bar(trees):
+        for tree in trees:
             sentences.append(TreeSentence(self, tree))
             i += 1
         if max_len is not None:
@@ -1032,4 +1008,3 @@ if __name__ == "__main__":
 
 
     import pdb; pdb.set_trace()
-

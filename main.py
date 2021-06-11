@@ -227,17 +227,23 @@ class CRFConstituency(nn.Module):
         loss = (logZ - score.sum(-1)) / total
         return loss, probs
 
-
+    
+    def log_sum_exp(x):
+        # x is an np array
+        c = x.max()
+        return c + np.log(np.sum(np.exp(x - c)))
+    
     def inside(self, scores, mask):
         batch_size, seq_len, seq_len, n_labels = scores.shape
         # [seq_len, seq_len, n_labels, batch_size]
         scores = scores.permute(1, 2, 3, 0)
         # [seq_len, seq_len, batch_size]
         mask = mask.permute(1, 2, 0)
-
+        #print('Scores',scores.shape)
         # working in the log space, initial s with log(0) == -inf
         s = torch.full_like(scores[:, :, 0], float('-inf'))
-
+        #print('Seq len', seq_len)
+        #print('S:', s.shape)
         for d in range(2, seq_len + 1): # d = 2, 3, ..., seq_len
             # define the offset variable for convenience
             offset = d - 1
@@ -246,13 +252,22 @@ class CRFConstituency(nn.Module):
             n = seq_len - offset
             # diag_mask is used for ignoring the excess of each sentence
             # [batch_size, n]
-            diag_mask = mask.diagonal(offset)
+            #print('Diag', scores.diagonal(offset).shape)
+            s_label = scores.diagonal(offset).logsumexp(0)
 
-            ##### TODO   
-            # if d == 2:
-            #    DO something 
-            # else:
-            #    DO something
+            if d == 2:
+                s.diagonal(offset).copy_(s_label)
+                continue
+            # [n, offset, batch_size]
+            #print(f'Stripe {n},{offset},:{stripe(s, n, offset - 1, (0, 1)).shape}')
+            #print(f'Stripe {n},{offset},:{stripe(s, n, offset - 1, (1, offset), 0).shape}')
+            s_span = stripe(s, n, offset - 1, (0, 1)) + stripe(s, n, offset - 1, (1, offset), 0)
+            #print('Span', s_span.shape)
+            # [batch_size, n, offset]
+            s_span = s_span.permute(2, 0, 1)
+            # [batch_size, n]
+            s_span = s_span.logsumexp(-1)
+            s.diagonal(offset).copy_(s_span + s_label)
 
         return s
 
