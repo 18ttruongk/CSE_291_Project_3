@@ -250,19 +250,14 @@ class CRFConstituency(nn.Module):
             # n denotes the number of spans to iterate,
             # from span (0, offset) to span (n, n+offset) given the offset
             n = seq_len - offset
-            # diag_mask is used for ignoring the excess of each sentence
-            # [batch_size, n]
-            #print('Diag', scores.diagonal(offset).shape)
+
             s_label = scores.diagonal(offset).logsumexp(0)
 
             if d == 2:
                 s.diagonal(offset).copy_(s_label)
                 continue
             # [n, offset, batch_size]
-            #print(f'Stripe {n},{offset},:{stripe(s, n, offset - 1, (0, 1)).shape}')
-            #print(f'Stripe {n},{offset},:{stripe(s, n, offset - 1, (1, offset), 0).shape}')
             s_span = stripe(s, n, offset - 1, (0, 1)) + stripe(s, n, offset - 1, (1, offset), 0)
-            #print('Span', s_span.shape)
             # [batch_size, n, offset]
             s_span = s_span.permute(2, 0, 1)
             # [batch_size, n]

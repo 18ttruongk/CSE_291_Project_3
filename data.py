@@ -59,7 +59,6 @@ def kmeans(x, k, max_it=32):
                 mask = torch.arange(k).unsqueeze(-1).eq(y)
             none = torch.where(~mask.any(-1))[0].tolist()
         # update the centroids
-        print(str(type(x))) # del
         c, old = (x * mask).sum(-1) / mask.sum(-1), c
 #         c = (x * mask).sum(-1) / mask.sum(-1)
         # re-assign all datapoints to clusters
