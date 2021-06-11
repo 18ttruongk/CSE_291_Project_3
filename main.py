@@ -441,11 +441,12 @@ class Model(nn.Module):
         x = torch.cat((x_f[:, :-1], x_b[:, 1:]), -1)
 
         # apply MLPs to the BiLSTM output states
-        feat_r_l = self.mlp_l(x)
+#         feat_r_l = self.mlp_l(x)
         feat_r_r = self.mlp_r(x)
 
         # [batch_size, seq_len, seq_len, n_labels]
-        feat_r = self.feat_biaffine(feat_r_l, feat_r_r).permute(0, 2, 3, 1)
+#         feat_r = self.feat_biaffine(feat_r_l, feat_r_r).permute(0, 2, 3, 1)
+        feat_r = self.feat_biaffine(feat_r_r, feat_r_r).permute(0, 2, 3, 1)
 
         return feat_r
 
