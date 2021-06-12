@@ -685,7 +685,7 @@ if __name__ == "__main__":
     print_tree_count = 2
     for i, tree in enumerate(ground_truth):
         tree = from_string(tree)
-        if tree.sen_len() <=10:
+        if tree.sen_len() <=15:
             draw_tree(tree, res_path =f"./ground_truth_{i}.png")
             draw_tree(from_string(predictions[i]), res_path=f"./pred_{i}.png")
             print_tree_count-=1
