@@ -412,9 +412,9 @@ class Model(nn.Module):
 
         # get outputs from embedding layers
         word_embed = self.word_embed(ext_words)
-        tag_embed = self.tag_embed(feats.pop())
+#         tag_embed = self.tag_embed(feats.pop())
         # concatenate the word and tag representations
-        embed = torch.cat((word_embed, tag_embed), -1)
+#         embed = torch.cat((word_embed, tag_embed), -1)
         
         return self.embed_dropout(embed)
 
@@ -445,8 +445,8 @@ class Model(nn.Module):
         feat_r_r = self.mlp_r(x)
 
         # [batch_size, seq_len, seq_len, n_labels]
-#         feat_r = self.feat_biaffine(feat_r_l, feat_r_r).permute(0, 2, 3, 1)
-        feat_r = self.feat_biaffine(feat_r_r, feat_r_r).permute(0, 2, 3, 1)
+        feat_r = self.feat_biaffine(feat_r_l, feat_r_r).permute(0, 2, 3, 1)
+#         feat_r = self.feat_biaffine(feat_r_r, feat_r_r).permute(0, 2, 3, 1)
 
         return feat_r
 
