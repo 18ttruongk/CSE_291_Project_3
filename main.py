@@ -415,7 +415,7 @@ class Model(nn.Module):
 #         tag_embed = self.tag_embed(feats.pop())
         # concatenate the word and tag representations
 #         embed = torch.cat((word_embed, tag_embed), -1)
-        embed = word_embed # del
+        embed = torch.cat((word_embed, word_embed), -1) # del
         return self.embed_dropout(embed)
 
 
