@@ -665,4 +665,29 @@ if __name__ == "__main__":
     train(model, traindata, devdata, optimizer)
     evaluate(model, testdata.loader)
 
-    predict(model, testdata.loader)
+#     predict(model, testdata.loader)
+    testdata.build(1, args.buckets)
+    ground_truth = []
+    predictions = []
+    for words, *feats, trees, charts in testdata.loader:
+        word_mask = words.ne(args.pad_index)[:, 1:]
+        mask = word_mask if len(words.shape) < 3 else word_mask.any(-1)
+        mask = (mask.unsqueeze(1) & mask.unsqueeze(2)).triu_(1)
+
+        s_feat = model(words, feats)
+        chart_preds = model.decode(s_feat, mask)
+        preds = [Tree.build(tree, [(i, j, CHART.vocab[label]) for i, j, label in chart])
+                 for tree, chart in zip(trees, chart_preds)]
+
+        ground_truth.append(trees[0]._pformat_flat("", "()", False))
+        predictions.append(preds[0]._pformat_flat("", "()", False))
+
+    print_tree_count = 2
+    for i, tree in enumerate(ground_truth):
+        tree = from_string(tree)
+        if tree.sen_len() <=10:
+            draw_tree(tree, res_path =f"./ground_truth_{i}.png")
+            draw_tree(from_string(predictions[i]), res_path=f"./pred_{i}.png")
+            print_tree_count-=1
+        if print_tree_count <=0:
+            break
