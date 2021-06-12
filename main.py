@@ -390,8 +390,8 @@ class Model(nn.Module):
         super().__init__()
         self.word_embed = nn.Embedding(num_embeddings=n_words, embedding_dim=n_embed)
         n_input = n_embed
-#         self.tag_embed = nn.Embedding(num_embeddings=n_tags, embedding_dim=n_feat_embed)
-#         n_input += n_feat_embed
+        self.tag_embed = nn.Embedding(num_embeddings=n_tags, embedding_dim=n_feat_embed)
+        n_input += n_feat_embed
         self.embed_dropout = nn.Dropout(p=embed_dropout)
         self.encoder = nn.LSTM(input_size=n_input, hidden_size=n_lstm_hidden, num_layers=n_lstm_layers,
                         bidirectional=True, dropout=encoder_dropout)
@@ -412,10 +412,10 @@ class Model(nn.Module):
 
         # get outputs from embedding layers
         word_embed = self.word_embed(ext_words)
-#         tag_embed = self.tag_embed(feats.pop())
+        tag_embed = self.tag_embed(feats.pop())
         # concatenate the word and tag representations
-#         embed = torch.cat((word_embed, tag_embed), -1)
-        embed = word_embed
+        embed = torch.cat((word_embed, tag_embed), -1)
+#         embed = word_embed
         return self.embed_dropout(embed)
 
 
